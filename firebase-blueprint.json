@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "Disaster": {
+      "title": "Disaster",
+      "description": "A documented disaster record.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The name of the disaster." },
+        "location": { "type": "string", "description": "The geographical location." },
+        "lat": { "type": "number", "description": "Latitude coordinate." },
+        "lng": { "type": "number", "description": "Longitude coordinate." },
+        "year": { "type": "integer", "description": "The year the disaster occurred." },
+        "category": { "type": "string", "enum": ["flood", "famine", "epidemic", "conflict", "environmental"], "description": "The type of disaster." },
+        "summary": { "type": "string", "description": "A short summary of the event." },
+        "survivorQuotes": { "type": "array", "items": { "type": "string" }, "description": "Quotes from survivors." },
+        "historianNotes": { "type": "string", "description": "Notes from local historians." },
+        "estimatedImpact": { "type": "string", "description": "Estimated human or environmental impact." },
+        "photos": { "type": "array", "items": { "type": "string" }, "description": "URLs to photos." },
+        "audioUrl": { "type": "string", "description": "URL to audio testimony." },
+        "credibility": { "type": "string", "enum": ["verified", "historian", "oral", "unverified"], "description": "Source credibility level." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the record was created." }
+      },
+      "required": ["title", "location", "lat", "lng", "year", "category", "summary", "credibility"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "A user-submitted disaster memory for moderation.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The name of the disaster." },
+        "location": { "type": "string", "description": "The geographical location." },
+        "year": { "type": "integer", "description": "The year the disaster occurred." },
+        "category": { "type": "string", "enum": ["flood", "famine", "epidemic", "conflict", "environmental"], "description": "The type of disaster." },
+        "summary": { "type": "string", "description": "A short summary of the event." },
+        "submitterUid": { "type": "string", "description": "The UID of the user who submitted the memory." },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"], "description": "Moderation status." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the submission was made." }
+      },
+      "required": ["title", "location", "year", "category", "summary", "submitterUid", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/disasters": {
+      "schema": "Disaster",
+      "description": "Collection of verified disasters."
+    },
+    "/submissions": {
+      "schema": "Submission",
+      "description": "Collection of user submissions for moderation."
+    }
+  }
+}

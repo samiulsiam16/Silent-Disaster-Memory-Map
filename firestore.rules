@@ -1,0 +1,128 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: disasters
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required)
+    //   - location: string (required)
+    //   - lat: number (required)
+    //   - lng: number (required)
+    //   - year: int (required)
+    //   - category: string (required, enum: flood, famine, epidemic, conflict, environmental)
+    //   - summary: string (required)
+    //   - survivorQuotes: list (optional)
+    //   - historianNotes: string (optional)
+    //   - estimatedImpact: string (optional)
+    //   - photos: list (optional)
+    //   - audioUrl: string (optional)
+    //   - credibility: string (required, enum: verified, historian, oral, unverified)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: submissions
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required)
+    //   - location: string (required)
+    //   - year: int (required)
+    //   - category: string (required, enum: flood, famine, epidemic, conflict, environmental)
+    //   - summary: string (required)
+    //   - submitterUid: string (required)
+    //   - status: string (required, enum: pending, approved, rejected)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - role: string (required, enum: admin, user)
+    //   - email: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "253-35-205@diu.edu.bd" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidDisaster(data) {
+      let categories = ['flood', 'famine', 'epidemic', 'conflict', 'environmental'];
+      let credibilities = ['verified', 'historian', 'oral', 'unverified'];
+      return hasRequiredFields(['title', 'location', 'lat', 'lng', 'year', 'category', 'summary', 'credibility']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.location is string && data.location.size() < 200 &&
+             data.lat is number && data.lng is number &&
+             data.year is int &&
+             data.category in categories &&
+             data.summary is string && data.summary.size() < 5000 &&
+             data.credibility in credibilities;
+    }
+
+    function isValidSubmission(data) {
+      let categories = ['flood', 'famine', 'epidemic', 'conflict', 'environmental'];
+      let statuses = ['pending', 'approved', 'rejected'];
+      return hasRequiredFields(['title', 'location', 'year', 'category', 'summary', 'submitterUid', 'status', 'createdAt']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.location is string && data.location.size() < 200 &&
+             data.year is int &&
+             data.category in categories &&
+             data.summary is string && data.summary.size() < 5000 &&
+             data.submitterUid == request.auth.uid &&
+             data.status in statuses &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if isAdmin();
+    }
+
+    match /disasters/{disasterId} {
+      allow read: if true; // Publicly readable for the map
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.submitterUid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidSubmission(request.resource.data) && request.resource.data.status == 'pending';
+      allow update: if isAdmin() && isValidSubmission(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
