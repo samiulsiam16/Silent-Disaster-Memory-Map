@@ -117,6 +117,7 @@ export default function App() {
               onSelect={setSelectedDisaster}
               hoveredId={hoveredId}
               setHoveredId={setHoveredId}
+              selectedDisaster={selectedDisaster}
             />
           </Suspense>
         </Canvas>
@@ -205,6 +206,36 @@ export default function App() {
             currentYear={currentYear} 
             onYearChange={setCurrentYear} 
           />
+
+          {/* Quick Summary Corner Overlay */}
+          <AnimatePresence>
+            {selectedDisaster && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="fixed bottom-24 right-8 z-30 w-80 p-6 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl pointer-events-none"
+              >
+                <div className="text-[10px] uppercase tracking-[0.3em] text-blue-400 mb-2 font-mono">
+                  Memory Fragment #{selectedDisaster.id}
+                </div>
+                <h3 className="text-lg font-serif italic text-white mb-3">
+                  {selectedDisaster.title}
+                </h3>
+                <p className="text-xs text-zinc-300 leading-relaxed font-light">
+                  {selectedDisaster.summary.split('.').slice(0, 2).join('.')}. 
+                  The impact was profound, affecting the region for decades. 
+                  This event remains a critical point in local oral history.
+                </p>
+                <div className="mt-4 flex items-center gap-2">
+                  <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse" />
+                  <span className="text-[9px] uppercase tracking-widest text-zinc-500">
+                    Analyzing Cause & Effect...
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Info Panel */}
           <AnimatePresence>
