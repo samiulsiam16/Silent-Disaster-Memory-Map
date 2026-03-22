@@ -1,19 +1,9 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { useFrame, useThree, extend, ThreeElements } from '@react-three/fiber';
-import { Sphere, Html, OrbitControls, Stars, useTexture, Float, PerspectiveCamera, Points, PointMaterial } from '@react-three/drei';
-import { EffectComposer, DepthOfField, Bloom, Noise, Vignette, ChromaticAberration } from '@react-three/postprocessing';
+import { useFrame, useThree } from '@react-three/fiber';
+import { Sphere, OrbitControls, useTexture, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
+import * as TWEEN from '@tweenjs/tween.js';
 import { Disaster, DisasterCategory } from './types';
-import { shaderMaterial } from '@react-three/drei';
-
-// Declare custom elements for JSX
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      atmosphereMaterial: any;
-    }
-  }
-}
 
 const CATEGORY_COLORS: Record<DisasterCategory, string> = {
   flood: '#60a5fa', // blue
@@ -23,43 +13,15 @@ const CATEGORY_COLORS: Record<DisasterCategory, string> = {
   environmental: '#34d399', // green
 };
 
-// Rayleigh scattering shader for limb glow
-const AtmosphereMaterial = shaderMaterial(
-  {
-    glowColor: new THREE.Color('#4299e1'),
-    viewVector: new THREE.Vector3(),
-  },
-  `
-    varying vec3 vNormal;
-    varying vec3 vViewPosition;
-    void main() {
-      vNormal = normalize(normalMatrix * normal);
-      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-      vViewPosition = -mvPosition.xyz;
-      gl_Position = projectionMatrix * mvPosition;
-    }
-  `,
-  `
-    uniform vec3 glowColor;
-    varying vec3 vNormal;
-    varying vec3 vViewPosition;
-    void main() {
-      float intensity = pow(0.6 - dot(vNormal, normalize(vViewPosition)), 4.0);
-      gl_FragColor = vec4(glowColor, intensity);
-    }
-  `
-);
-
-extend({ AtmosphereMaterial });
-
-function VolumetricMarker({ disaster, onClick, isHovered, onHover }: { 
+// IDEA 4 — Disaster Markers
+function DisasterMarker({ disaster, onClick, isHovered, onHover }: { 
   disaster: Disaster; 
   onClick: (d: Disaster) => void;
   isHovered: boolean;
   onHover: (id: string | null) => void;
 }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const particlesRef = useRef<THREE.Points>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const spriteRef = useRef<THREE.Sprite>(null);
 
   const position = useMemo(() => {
     const radius = 2.0;
@@ -72,145 +34,120 @@ function VolumetricMarker({ disaster, onClick, isHovered, onHover }: {
     );
   }, [disaster.lat, disaster.lng]);
 
-  // Category specific particles
-  const particles = useMemo(() => {
-    const count = 40;
-    const positions = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 0.1;
-      positions[i * 3 + 1] = Math.random() * 0.5;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 0.1;
-    }
-    return positions;
-  }, []);
-
   useFrame((state) => {
-    if (particlesRef.current) {
+    if (groupRef.current) {
       const time = state.clock.elapsedTime;
-      const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
-      for (let i = 0; i < 40; i++) {
-        positions[i * 3 + 1] += 0.002 * (Math.sin(time + i) + 1.5);
-        if (positions[i * 3 + 1] > 0.5) positions[i * 3 + 1] = 0;
-      }
-      particlesRef.current.geometry.attributes.position.needsUpdate = true;
+      // Sine wave animation for the marker
+      const scale = 1 + Math.sin(time * 3 + disaster.lat) * 0.1;
+      groupRef.current.scale.set(scale, scale, scale);
+    }
+    if (spriteRef.current) {
+      const time = state.clock.elapsedTime;
+      spriteRef.current.position.y = 0.3 + Math.sin(time * 2 + disaster.lng) * 0.05;
     }
   });
 
   return (
-    <group position={position} quaternion={new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), position.clone().normalize())}>
-      {/* Volumetric Beam */}
+    <group 
+      position={position} 
+      quaternion={new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), position.clone().normalize())}
+      ref={groupRef}
+    >
+      {/* Cone Geometry pointing upward */}
       <mesh 
-        ref={meshRef}
         onClick={(e) => {
           e.stopPropagation();
           onClick(disaster);
         }}
         onPointerOver={() => onHover(disaster.id)}
         onPointerOut={() => onHover(null)}
-        position={[0, 0.25, 0]}
+        position={[0, 0.15, 0]}
       >
-        <cylinderGeometry args={[0.005, 0.04, 0.5, 32, 1, true]} />
-        <meshBasicMaterial 
+        <coneGeometry args={[0.03, 0.3, 8]} />
+        <meshPhongMaterial 
           color={CATEGORY_COLORS[disaster.category]} 
+          emissive={CATEGORY_COLORS[disaster.category]}
+          emissiveIntensity={2}
           transparent 
-          opacity={isHovered ? 0.6 : 0.3}
-          side={THREE.DoubleSide}
+          opacity={isHovered ? 0.8 : 0.4}
         />
       </mesh>
 
-      {/* Category Particles */}
-      <Points ref={particlesRef} positions={particles}>
-        <PointMaterial 
-          transparent 
-          color={CATEGORY_COLORS[disaster.category]} 
-          size={0.015} 
-          sizeAttenuation={true} 
-          depthWrite={false} 
+      {/* Sprite for "particles" (GPU friendly) */}
+      <sprite ref={spriteRef} scale={[0.15, 0.15, 0.15]} position={[0, 0.3, 0]}>
+        <spriteMaterial 
+          color={CATEGORY_COLORS[disaster.category]}
+          transparent
+          opacity={0.6}
           blending={THREE.AdditiveBlending}
         />
-      </Points>
-      
-      {/* Base Glow */}
-      <mesh position={[0, 0, 0]}>
-        <circleGeometry args={[0.05, 32]} />
-        <meshBasicMaterial 
-          color={CATEGORY_COLORS[disaster.category]} 
-          transparent 
-          opacity={0.8}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
+      </sprite>
     </group>
   );
 }
 
-function MilkyWay() {
-  const count = 15000;
-  const [positions, colors, sizes] = useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    const col = new Float32Array(count * 3);
-    const siz = new Float32Array(count);
+// IDEA 2 — Universe Environment
+function Universe() {
+  const starsRef = useRef<THREE.Points>(null);
+  const nebulaRef1 = useRef<THREE.Mesh>(null);
+  const nebulaRef2 = useRef<THREE.Mesh>(null);
+  const { mouse } = useThree();
+
+  const [starGeometry, nebulaTexture] = useMemo(() => {
+    // 12,000 stars
+    const count = 12000;
+    const positions = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
     for (let i = 0; i < count; i++) {
-      const r = 100 + Math.random() * 200;
+      const r = 50 + Math.random() * 100;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
-      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      pos[i * 3 + 2] = r * Math.cos(phi);
-
-      const brightness = 0.5 + Math.random() * 0.5;
-      col[i * 3] = brightness;
-      col[i * 3 + 1] = brightness;
-      col[i * 3 + 2] = brightness;
-      
-      siz[i] = Math.random() * 2;
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
+      sizes[i] = 0.3 + Math.random() * 2.2;
     }
-    return [pos, col, siz];
-  }, []);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
-  const starsRef = useRef<THREE.Points>(null);
-  const { mouse } = useThree();
+    // Nebula texture using canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d')!;
+    const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+    gradient.addColorStop(0, 'rgba(100, 50, 255, 0.2)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 256, 256);
+    const tex = new THREE.CanvasTexture(canvas);
+
+    return [geo, tex];
+  }, []);
 
   useFrame(() => {
     if (starsRef.current) {
+      // Mouse parallax
+      starsRef.current.position.x = THREE.MathUtils.lerp(starsRef.current.position.x, mouse.x * 0.5, 0.05);
+      starsRef.current.position.y = THREE.MathUtils.lerp(starsRef.current.position.y, mouse.y * 0.5, 0.05);
       starsRef.current.rotation.y += 0.0001;
-      // Parallax
-      starsRef.current.position.x = THREE.MathUtils.lerp(starsRef.current.position.x, mouse.x * 2, 0.05);
-      starsRef.current.position.y = THREE.MathUtils.lerp(starsRef.current.position.y, mouse.y * 2, 0.05);
     }
   });
 
   return (
-    <Points ref={starsRef} positions={positions} colors={colors} sizes={sizes}>
-      <PointMaterial 
-        transparent 
-        vertexColors 
-        sizeAttenuation={false} 
-        size={1.5} 
-        depthWrite={false} 
-        blending={THREE.AdditiveBlending} 
-      />
-    </Points>
-  );
-}
-
-function Moon() {
-  const moonRef = useRef<THREE.Group>(null);
-  const moonTexture = useTexture('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg');
-
-  useFrame((state) => {
-    if (moonRef.current) {
-      const t = state.clock.elapsedTime * 0.05;
-      moonRef.current.position.set(Math.cos(t) * 12, 4, Math.sin(t) * 12);
-      moonRef.current.rotation.y += 0.002;
-    }
-  });
-
-  return (
-    <group ref={moonRef}>
-      <Sphere args={[0.4, 64, 64]}>
-        <meshStandardMaterial map={moonTexture} roughness={1} metalness={0} />
-      </Sphere>
+    <group>
+      <points ref={starsRef} geometry={starGeometry}>
+        <pointsMaterial size={1.5} sizeAttenuation={false} color="#ffffff" transparent opacity={0.8} />
+      </points>
+      <mesh ref={nebulaRef1} position={[20, 10, -50]} rotation={[0, 0, 0.5]}>
+        <planeGeometry args={[100, 100]} />
+        <meshBasicMaterial map={nebulaTexture} transparent blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
+      <mesh ref={nebulaRef2} position={[-30, -20, -60]} rotation={[0, 0, -0.5]}>
+        <planeGeometry args={[120, 120]} />
+        <meshBasicMaterial map={nebulaTexture} color="#4400ff" transparent blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
     </group>
   );
 }
@@ -223,117 +160,117 @@ export function Globe({ disasters, onSelect, hoveredId, setHoveredId, selectedDi
   selectedDisaster: Disaster | null;
 }) {
   const globeRef = useRef<THREE.Group>(null);
+  const earthRef = useRef<THREE.Mesh>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
-  const atmosphereRef = useRef<any>(null);
   const controlsRef = useRef<any>(null);
-  const { mouse, camera } = useThree();
+  const { camera, gl } = useThree();
 
-  const [map, normalMap, specularMap, cloudsMap, nightMap] = useTexture([
-    'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg',
-    'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_normal_2048.jpg',
-    'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_specular_2048.jpg',
-    'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png',
-    'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_lights_2048.png',
+  // IDEA 1 — Hyper-Realistic Earth Textures
+  const [map, cloudsMap] = useTexture([
+    'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+    'https://unpkg.com/three-globe/example/img/earth-clouds.png',
   ]);
 
-  // Camera Zoom Logic
+  // IDEA 3 — Camera Interaction with TWEEN
   useEffect(() => {
-    if (selectedDisaster && controlsRef.current) {
-      const radius = 2.0;
-      const phi = (90 - selectedDisaster.lat) * (Math.PI / 180);
-      const theta = (selectedDisaster.lng + 180) * (Math.PI / 180);
-      const targetPos = new THREE.Vector3(
-        -radius * Math.sin(phi) * Math.cos(theta),
-        radius * Math.cos(phi),
-        radius * Math.sin(phi) * Math.sin(theta)
-      ).multiplyScalar(1.5); // Zoom distance
+    const handleDoubleClick = () => {
+      if (selectedDisaster) {
+        const radius = 2.0;
+        const phi = (90 - selectedDisaster.lat) * (Math.PI / 180);
+        const theta = (selectedDisaster.lng + 180) * (Math.PI / 180);
+        const targetPos = new THREE.Vector3(
+          -radius * Math.sin(phi) * Math.cos(theta),
+          radius * Math.cos(phi),
+          radius * Math.sin(phi) * Math.sin(theta)
+        ).multiplyScalar(2.2);
 
-      // Smoothly move camera
-      const startPos = camera.position.clone();
-      const duration = 1.5;
-      let elapsed = 0;
+        // CSS Blur Simulation
+        const canvas = gl.domElement;
+        canvas.style.transition = 'filter 0.5s ease';
+        canvas.style.filter = 'blur(8px)';
+        setTimeout(() => {
+          canvas.style.filter = 'blur(0px)';
+        }, 1000);
 
-      const animate = () => {
-        elapsed += 0.016;
-        const t = Math.min(elapsed / duration, 1);
-        const ease = 1 - Math.pow(1 - t, 3); // Cubic ease out
-        camera.position.lerpVectors(startPos, targetPos, ease);
-        controlsRef.current.target.lerp(new THREE.Vector3(0, 0, 0), ease);
-        if (t < 1) requestAnimationFrame(animate);
-      };
-      animate();
-    }
-  }, [selectedDisaster, camera]);
+        new TWEEN.Tween(camera.position)
+          .to({ x: targetPos.x, y: targetPos.y, z: targetPos.z }, 1500)
+          .easing(TWEEN.Easing.Cubic.Out)
+          .start();
+        
+        new TWEEN.Tween(controlsRef.current.target)
+          .to({ x: 0, y: 0, z: 0 }, 1500)
+          .easing(TWEEN.Easing.Cubic.Out)
+          .start();
+      }
+    };
+
+    window.addEventListener('dblclick', handleDoubleClick);
+    return () => window.removeEventListener('dblclick', handleDoubleClick);
+  }, [selectedDisaster, camera, gl]);
 
   useFrame((state) => {
+    TWEEN.update();
     if (cloudsRef.current) {
-      cloudsRef.current.rotation.y += 0.0004;
+      cloudsRef.current.rotation.y += 0.0005;
     }
-    if (globeRef.current) {
-      // Scene tilt
-      globeRef.current.rotation.z = THREE.MathUtils.lerp(globeRef.current.rotation.z, mouse.x * 0.05, 0.05);
-      globeRef.current.rotation.x = THREE.MathUtils.lerp(globeRef.current.rotation.x, -mouse.y * 0.05, 0.05);
+    if (earthRef.current) {
+      // Globe heartbeat pulse (Idea 9)
+      const time = state.clock.elapsedTime;
+      if (time < 3) {
+        const pulse = 1 + Math.sin(time * 10) * 0.01;
+        earthRef.current.scale.set(pulse, pulse, pulse);
+      } else {
+        earthRef.current.scale.set(1, 1, 1);
+      }
     }
   });
 
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 0, 6]} fov={45} />
-      <ambientLight intensity={0.1} />
-      <directionalLight position={[5, 3, 5]} intensity={2.5} color="#ffffff" />
-      <pointLight position={[-5, -3, -5]} intensity={0.5} color="#1e3a8a" />
       
-      <MilkyWay />
-      <Moon />
+      {/* IDEA 1 — Lighting */}
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[5, 3, 5]} intensity={2} color="#ffffff" />
+      
+      <Universe />
       
       <group ref={globeRef}>
-        <Sphere args={[2, 128, 128]}>
-          <meshStandardMaterial 
+        {/* IDEA 1 — Hyper-Realistic Earth */}
+        <mesh ref={earthRef}>
+          <sphereGeometry args={[2, 64, 64]} />
+          <meshPhongMaterial 
             map={map}
-            normalMap={normalMap}
-            roughnessMap={specularMap}
-            roughness={0.6}
-            metalness={0.2}
-            emissiveMap={nightMap}
-            emissive={new THREE.Color('#ffffff')}
-            emissiveIntensity={0.5}
+            shininess={5}
           />
-        </Sphere>
+        </mesh>
 
         {/* Clouds */}
-        <Sphere ref={cloudsRef} args={[2.02, 128, 128]}>
-          <meshStandardMaterial 
+        <mesh ref={cloudsRef}>
+          <sphereGeometry args={[2.03, 64, 64]} />
+          <meshPhongMaterial 
             map={cloudsMap}
             transparent
-            opacity={0.3}
+            opacity={0.4}
             depthWrite={false}
           />
-        </Sphere>
+        </mesh>
 
-        {/* Atmosphere Limb Glow */}
-        <Sphere args={[2.1, 128, 128]}>
-          {/* @ts-ignore */}
-          <atmosphereMaterial 
-            ref={atmosphereRef}
+        {/* Atmosphere */}
+        <mesh>
+          <sphereGeometry args={[2.1, 64, 64]} />
+          <meshBasicMaterial 
+            color="#4299e1"
             transparent
+            opacity={0.1}
             side={THREE.BackSide}
             blending={THREE.AdditiveBlending}
           />
-        </Sphere>
+        </mesh>
 
-        {/* Grid Overlay */}
-        <Sphere args={[2.005, 64, 64]}>
-          <meshBasicMaterial 
-            wireframe 
-            color="#ffffff" 
-            transparent 
-            opacity={0.08} 
-          />
-        </Sphere>
-
-        {/* Volumetric Markers */}
+        {/* Disaster Markers */}
         {disasters.map((d) => (
-          <VolumetricMarker 
+          <DisasterMarker 
             key={d.id} 
             disaster={d} 
             onClick={onSelect}
@@ -346,32 +283,13 @@ export function Globe({ disasters, onSelect, hoveredId, setHoveredId, selectedDi
       <OrbitControls 
         ref={controlsRef}
         enablePan={false}
-        minDistance={2.2}
-        maxDistance={15}
-        rotateSpeed={0.8}
-        zoomSpeed={1.2}
+        minDistance={2.5}
+        maxDistance={12}
         enableDamping={true}
-        dampingFactor={0.05}
-        autoRotate={!hoveredId && !selectedDisaster}
-        autoRotateSpeed={0.2}
+        dampingFactor={0.08}
+        autoRotate={!selectedDisaster && !hoveredId}
+        autoRotateSpeed={0.5}
       />
-
-      <EffectComposer>
-        <Bloom 
-          luminanceThreshold={0.8} 
-          mipmapBlur 
-          intensity={1.5} 
-          radius={0.4} 
-        />
-        <DepthOfField 
-          focusDistance={0} 
-          focalLength={0.02} 
-          bokehScale={2} 
-          height={480} 
-        />
-        <Vignette eskil={false} offset={0.1} darkness={1.1} />
-        <ChromaticAberration offset={new THREE.Vector2(0.001, 0.001)} />
-      </EffectComposer>
     </>
   );
 }

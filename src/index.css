@@ -41,7 +41,7 @@ input[type='range']::-webkit-slider-thumb {
   left: 0;
   width: 100%;
   height: 100%;
-  box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.8);
+  background: radial-gradient(circle, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
   pointer-events: none;
   z-index: 40;
 }
@@ -52,45 +52,70 @@ input[type='range']::-webkit-slider-thumb {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    rgba(18, 16, 16, 0) 50%,
-    rgba(0, 0, 0, 0.1) 50%
-  ),
-  linear-gradient(
-    90deg,
-    rgba(255, 0, 0, 0.02),
-    rgba(0, 255, 0, 0.01),
-    rgba(0, 0, 255, 0.02)
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.03) 0px,
+    rgba(0, 0, 0, 0.03) 1px,
+    transparent 1px,
+    transparent 2px
   );
-  background-size: 100% 3px, 3px 100%;
   pointer-events: none;
   z-index: 45;
-  opacity: 0.03;
+}
+
+.grid-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 40 0 L 0 0 0 40' fill='none' stroke='white' stroke-opacity='0.03' stroke-width='0.5'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 35;
 }
 
 .holographic-card {
-  @apply bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_0_20px_rgba(0,150,255,0.1)];
-  box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.05);
+  @apply bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl;
+  box-shadow: 0 0 20px rgba(0, 150, 255, 0.1), inset 0 0 15px rgba(255, 255, 255, 0.05);
+  animation: borderPulse 4s infinite alternate;
+}
+
+@keyframes borderPulse {
+  0% { box-shadow: 0 0 20px rgba(0, 150, 255, 0.1), inset 0 0 15px rgba(255, 255, 255, 0.05); }
+  100% { box-shadow: 0 0 30px rgba(0, 150, 255, 0.2), inset 0 0 25px rgba(255, 255, 255, 0.1); }
+}
+
+.scanline-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(0, 150, 255, 0.5), transparent);
+  animation: scanlineMove 3s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scanlineMove {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000%); }
 }
 
 .hairline-border {
   @apply border border-white/10 shadow-[0_0_10px_rgba(0,150,255,0.2)];
 }
 
-.text-typewriter {
-  overflow: hidden;
-  border-right: 2px solid rgba(255, 255, 255, 0.75);
-  white-space: nowrap;
-  animation: typewriter 2s steps(40) 1s 1 normal both, blinkTextCursor 500ms steps(40) infinite normal;
+.cinematic-reveal {
+  clip-path: inset(0 0 100% 0);
+  animation: revealClip 1.2s forwards ease-in-out;
 }
 
-@keyframes typewriter {
-  from { width: 0; }
-  to { width: 100%; }
+@keyframes revealClip {
+  0% { clip-path: inset(0 0 100% 0); }
+  100% { clip-path: inset(0 0 0% 0); }
 }
 
-@keyframes blinkTextCursor {
-  from { border-right-color: rgba(255, 255, 255, 0.75); }
-  to { border-right-color: transparent; }
+.will-change-transform {
+  will-change: transform;
 }
 
