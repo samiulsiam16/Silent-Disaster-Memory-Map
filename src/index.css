@@ -106,13 +106,13 @@ input[type='range']::-webkit-slider-thumb {
 }
 
 .cinematic-reveal {
-  clip-path: inset(0 0 100% 0);
-  animation: revealClip 1.2s forwards ease-in-out;
+  opacity: 0;
+  animation: revealOpacity 1.2s forwards ease-in-out;
 }
 
-@keyframes revealClip {
-  0% { clip-path: inset(0 0 100% 0); }
-  100% { clip-path: inset(0 0 0% 0); }
+@keyframes revealOpacity {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 .will-change-transform {

@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Globe as GlobeIcon } from 'lucide-react';
 
 export function LandingScreen({ onStart }: { onStart: () => void }) {

@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, Calendar, Info, Quote, BookOpen, ShieldCheck, Heart, Headphones } from 'lucide-react';
 import { Disaster, DisasterCategory } from './types';
 import Markdown from 'react-markdown';

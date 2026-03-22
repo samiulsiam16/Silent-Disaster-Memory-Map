@@ -1,6 +1,6 @@
 import { useState, useEffect, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Globe } from './Globe';
 import { InfoPanel } from './InfoPanel';
 import { Timeline } from './Timeline';
@@ -92,10 +92,10 @@ function CinematicIntro({ onComplete }: { onComplete: () => void }) {
         </motion.div>
         
         <motion.h1 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.5, duration: 2 }}
-          className="text-5xl md:text-7xl font-rajdhani font-light text-white leading-tight cinematic-reveal tracking-widest uppercase"
+          className="text-5xl md:text-7xl font-rajdhani font-light text-white leading-tight tracking-widest uppercase"
         >
           SILENT DISASTER <br />
           <span className="text-blue-500">MEMORY MAP</span>
@@ -195,7 +195,7 @@ function HeatmapOverlay({ disasters }: { disasters: Disaster[] }) {
 }
 
 export default function App() {
-  const [isIntroComplete, setIsIntroComplete] = useState(false);
+  const [isIntroComplete, setIsIntroComplete] = useState(true);
   const [selectedDisaster, setSelectedDisaster] = useState<Disaster | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [currentYear, setCurrentYear] = useState(1950);
@@ -256,16 +256,15 @@ export default function App() {
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden font-sans">
-      <AnimatePresence>
-        {!isIntroComplete && (
-          <CinematicIntro onComplete={() => setIsIntroComplete(true)} />
-        )}
-      </AnimatePresence>
+      <div className="fixed top-0 left-0 z-[999] bg-red-500 text-white p-2 text-xs">APP RENDERING</div>
+      {!isIntroComplete && (
+        <CinematicIntro onComplete={() => setIsIntroComplete(true)} />
+      )}
 
-      {/* IDEA 10 — 4K UI Polish Layers */}
-      <div className="grid-overlay" />
+      {/* IDEA 10 — 4K UI Polish Layers (temporarily removed for debugging) */}
+      {/* <div className="grid-overlay" />
       <div className="vignette" />
-      <div className="scanline" />
+      <div className="scanline" /> */}
 
       {isHeatmapMode && <HeatmapOverlay disasters={filteredDisasters} />}
 
@@ -277,7 +276,11 @@ export default function App() {
         className="absolute inset-0 z-0"
       >
         <Canvas camera={{ position: [0, 0, 6], fov: 45 }}>
-          <Suspense fallback={null}>
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshBasicMaterial color="red" />
+          </mesh>
+          <Suspense fallback={<div className="flex items-center justify-center w-full h-full text-blue-500 font-mono text-xs">LOADING 3D SCENE...</div>}>
             <Globe 
               disasters={filteredDisasters} 
               onSelect={setSelectedDisaster}
@@ -367,8 +370,8 @@ export default function App() {
 
           {isSubmissionOpen && <SubmissionForm user={user} onLogin={handleLogin} onClose={() => setIsSubmissionOpen(false)} />}
 
-          {/* IDEA 9 — Scan-line reveal */}
-          <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-[90] cinematic-reveal bg-black/20" />
+          {/* IDEA 9 — Scan-line reveal (removed cinematic-reveal class for reliability) */}
+          <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-[90] bg-black/20" />
         </motion.div>
       )}
     </div>
