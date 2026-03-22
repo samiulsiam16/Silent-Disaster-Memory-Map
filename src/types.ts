@@ -9,6 +9,9 @@ export interface Disaster {
   year: number;
   category: DisasterCategory;
   summary: string;
+  cause?: string;
+  effect?: string;
+  underreportedReason?: string;
   survivorQuotes?: string[];
   historianNotes?: string;
   estimatedImpact?: string;

@@ -1,42 +1,46 @@
 import { motion } from 'motion/react';
+import { Calendar } from 'lucide-react';
 
 export function Timeline({ currentYear, onYearChange }: { 
   currentYear: number; 
-  onYearChange: (year: number) => void 
+  onYearChange: (year: number) => void;
 }) {
-  const years = Array.from({ length: 11 }, (_, i) => 1900 + i * 15);
-
+  const startYear = 1800;
+  const endYear = 2026;
+  
   return (
-    <div className="fixed bottom-12 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30">
-      <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-blue-500/5 pointer-events-none" />
+    <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-30 w-full max-w-3xl px-8">
+      <div className="p-6 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full flex items-center gap-6 shadow-[0_0_30px_rgba(0,150,255,0.1)]">
+        <div className="flex items-center gap-3 text-blue-400">
+          <Calendar size={18} />
+          <span className="text-lg font-mono font-medium w-16">{currentYear}</span>
+        </div>
         
-        <div className="flex justify-between mb-4 px-2">
-          {years.map((year) => (
-            <div key={year} className="flex flex-col items-center">
-              <div className={`w-px h-2 ${year === currentYear ? 'bg-blue-400' : 'bg-zinc-700'}`} />
-              <span className={`text-[8px] mt-1 tracking-tighter ${year === currentYear ? 'text-blue-400' : 'text-zinc-600'}`}>
+        <div className="flex-1 relative group">
+          <input 
+            type="range" 
+            min={startYear} 
+            max={endYear} 
+            value={currentYear} 
+            onChange={(e) => onYearChange(parseInt(e.target.value))}
+            className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-blue-500"
+          />
+          
+          {/* Year Markers */}
+          <div className="absolute -bottom-6 left-0 w-full flex justify-between px-1 pointer-events-none">
+            {[1800, 1850, 1900, 1950, 2000, 2026].map(year => (
+              <span key={year} className="text-[8px] uppercase tracking-widest text-zinc-600 font-mono">
                 {year}
               </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        <input
-          type="range"
-          min="1900"
-          max="2050"
-          value={currentYear}
-          onChange={(e) => onYearChange(parseInt(e.target.value))}
-          className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
-        />
-
-        <div className="mt-4 flex justify-center">
-          <div className="px-4 py-1 bg-white/5 rounded-full border border-white/10">
-            <span className="text-xs font-mono text-blue-400 tracking-widest">
-              TEMPORAL FOCUS: {currentYear}
-            </span>
-          </div>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${currentYear < 1900 ? 'bg-zinc-500 grayscale' : 'bg-blue-500'} animate-pulse`} />
+          <span className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-mono">
+            {currentYear < 1900 ? 'Historical Archive' : 'Modern Record'}
+          </span>
         </div>
       </div>
     </div>
