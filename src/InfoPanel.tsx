@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, MapPin, Calendar, Info, Quote, BookOpen, ShieldCheck, Heart, Headphones } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { X, MapPin, Calendar, Info, Quote, BookOpen, ShieldCheck, Heart } from 'lucide-react';
 import { Disaster, DisasterCategory } from './types';
 import Markdown from 'react-markdown';
 
@@ -14,26 +14,13 @@ const CATEGORY_LABELS: Record<DisasterCategory, string> = {
 export function InfoPanel({ disaster, onClose }: { disaster: Disaster; onClose: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100, scale: 0.9 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 100, scale: 0.9 }}
-      transition={{ type: "spring", damping: 20, stiffness: 100 }}
-      className="fixed top-8 right-8 z-50 w-[450px] h-[calc(100vh-64px)] holographic-card flex flex-col overflow-hidden pointer-events-auto"
+      initial={{ opacity: 0, x: 100 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 100 }}
+      className="fixed top-8 right-8 z-50 w-[450px] h-[calc(100vh-64px)] glass-panel rounded-3xl flex flex-col overflow-hidden pointer-events-auto heartbeat-pulse"
     >
-      {/* Heartbeat Border Pulse */}
-      <motion.div 
-        animate={{ opacity: [0.1, 0.3, 0.1] }}
-        transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute inset-0 border-2 border-blue-500/30 rounded-3xl pointer-events-none"
-      />
-
-      {/* Scanline Sweep */}
-      <motion.div 
-        initial={{ top: "-100%" }}
-        animate={{ top: "200%" }}
-        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-        className="absolute left-0 w-full h-32 bg-gradient-to-b from-transparent via-blue-400/10 to-transparent pointer-events-none"
-      />
+      {/* Scanline Entry Animation */}
+      <div className="scanline-reveal absolute inset-0 pointer-events-none" />
 
       {/* Header */}
       <div className="relative p-8 border-b border-white/10">
@@ -63,7 +50,7 @@ export function InfoPanel({ disaster, onClose }: { disaster: Disaster; onClose: 
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8 relative">
+      <div className="flex-1 overflow-y-auto p-8 space-y-8 relative scrollbar-hide">
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
