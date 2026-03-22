@@ -64,7 +64,7 @@ function DisasterMarker({ disaster, onClick, isHovered, onHover }: {
         position={[0, 0.15, 0]}
       >
         <coneGeometry args={[0.03, 0.3, 8]} />
-        <meshPhongMaterial 
+        <meshStandardMaterial 
           color={CATEGORY_COLORS[disaster.category]} 
           emissive={CATEGORY_COLORS[disaster.category]}
           emissiveIntensity={2}
@@ -239,16 +239,17 @@ export function Globe({ disasters, onSelect, hoveredId, setHoveredId, selectedDi
         {/* IDEA 1 — Hyper-Realistic Earth */}
         <mesh ref={earthRef}>
           <sphereGeometry args={[2, 64, 64]} />
-          <meshPhongMaterial 
+          <meshStandardMaterial 
             map={map}
-            shininess={5}
+            roughness={0.7}
+            metalness={0.2}
           />
         </mesh>
 
         {/* Clouds */}
         <mesh ref={cloudsRef}>
           <sphereGeometry args={[2.03, 64, 64]} />
-          <meshPhongMaterial 
+          <meshStandardMaterial 
             map={cloudsMap}
             transparent
             opacity={0.4}

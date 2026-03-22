@@ -34,7 +34,7 @@ input[type='range']::-webkit-slider-thumb {
   @apply appearance-none w-4 h-4 bg-blue-500 rounded-full border-2 border-black shadow-lg hover:scale-110 transition-transform;
 }
 
-/* 4K UI Polish: Vignette and Scanline */
+/* 4K UI Polish */
 .vignette {
   position: fixed;
   top: 0;
